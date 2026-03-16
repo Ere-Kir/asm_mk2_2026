@@ -75,15 +75,6 @@ control_range:
     cmp bl, 7Fh
     je print_del
     
-    xor bh, bh
-    shl bx, 1
-    pop dx
-    pop cx
-    pop bx
-    push bx
-    push cx
-    push dx
-    
     cmp bl, 0
     jne c1
     mov dx, offset ctrl_00

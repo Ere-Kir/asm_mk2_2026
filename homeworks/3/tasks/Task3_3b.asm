@@ -3,11 +3,13 @@ stack segment para stack
 stack ends
 
 data segment para public
-	a dw 5
-	b dw 3
-	c dw ?
+	a dw 500
+	b dw 300
+	c_l dw ?
+	c_h dw ?
 	text db "Res: $"
 	newline db 0Dh, 0Ah, '$'
+	buffer db 11 dup('$')
 data ends
 
 code segment para public
@@ -20,33 +22,67 @@ start:
 	mov ax, stack
 	mov ss, ax
 	
-	mov ax, a
-	add ax, b
+	mov ax, word ptr [a]
+	add ax, word ptr [b]
 	imul ax
-	mov c, ax
+	mov word ptr [c_l], ax
+	mov word ptr [c_h], dx
 	
 	mov dx, offset text
 	mov ah, 09h
 	int 21h
 	
-	mov ax, c
-	mov cx, 0
-	mov bx, 10
+	mov ax, word ptr [c_l]
+	mov dx, word ptr [c_h]
+	
+	mov si, offset buffer
+	add si, 10
+	mov byte ptr [si], '$'
+	dec si
+	
+	cmp dx, 0
+	jne convert
+	cmp ax, 0
+	jne convert
+	mov byte ptr [si], '0'
+	dec si
+	jmp print
 	
 convert:
+	push bx
+	push cx
+	
+	mov cx, 10
+	
+	mov bx, ax
+	mov ax, dx
 	xor dx, dx
-	div bx
-	push dx
-	inc cx
+	div cx
+	
+	push ax
+	
+	mov ax, bx
+	div cx
+	
+	add dl, '0'
+	mov [si], dl
+	dec si
+	
+	pop dx
+	
+	cmp dx, 0
+	jne convert
 	cmp ax, 0
 	jne convert
 	
+	pop cx
+	pop bx
+	
 print:
-	pop dx
-	add dl, '0'
-	mov ah, 02h
+	inc si
+	mov dx, si
+	mov ah, 09h
 	int 21h
-	loop print
 	
 	mov dx, offset newline
 	mov ah, 09h

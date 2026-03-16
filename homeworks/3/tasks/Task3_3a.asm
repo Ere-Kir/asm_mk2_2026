@@ -20,14 +20,14 @@ start:
 	mov ax, stack
 	mov ss, ax
 	
-	mov ax, x
-	imul y
+	mov ax, word ptr[x]
+	imul word ptr [y]
 	
 	push dx
 	push ax
 	
-	mov ax, x
-	add ax, y
+	mov ax, word ptr [x]
+	add ax, word ptr [y]
 	
 	cmp ax, 0
 	je exit
@@ -39,18 +39,18 @@ start:
 	
 	idiv bx
 	
-	mov z, ax
+	mov word ptr[z], ax
 	
 	mov dx, offset text
 	mov ah, 09h
 	int 21h
 	
-	mov ax, z
+	mov ax, word ptr [z]
 	mov cx, 0
 	mov bx, 10
 	
 convert:
-	xor dx, dx
+	xor dx, dx	;Здесь нет риска перетереть старшую часть
 	div bx
 	push dx
 	inc cx

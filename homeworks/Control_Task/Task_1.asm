@@ -61,24 +61,74 @@ start:
 	mov ax, stack
 	mov ss, ax
 	
+	call print_text1
+	
+	call read_string
+	
+	call print_newline
+	
+	call calc_crc16
+	mov word ptr [crc_result], ax
+	
+	call print_text2
+	
+	mov ax, word ptr [crc_result]
+	call word_to_hex
+	
+	call print_hex_buffer
+	
+	call print_newline
+	
+	mov ax, 4c00h
+	int 21h
+	
+	
+print_text1:
 	mov dx, offset text1
 	mov ah, 09h
 	int 21h
+	ret
 	
+read_string:
 	mov dx, offset max_len
 	mov ah, 0Ah
 	int 21h
+	ret
 	
+print_newline:
+	push dx
 	mov dx, offset newline
 	mov ah, 09h
 	int 21h
+	pop dx
+	ret
+
+print_text2:
+	push dx
+	mov dx, offset text2
+	mov ah, 09h
+	int 21h
+	pop dx
+	ret
+
+print_hex_buffer:
+	push dx
+	mov dx, offset hex_buffer
+	mov ah, 09h
+	int 21h
+	pop dx
+	ret
 	
+calc_crc16:
+	push bx
+	push cx
+	push dx
+	push si
 	
 	mov ax, 0FFFFh
-	xor bx, bx
+	
 	mov cl, byte ptr [len]
 	xor ch, ch
-	
 	cmp cx, 0
 	je crc_done
 	
@@ -86,7 +136,6 @@ start:
 	
 crc_loop:
 	mov bl, byte ptr [si]
-	
 	mov dx, ax
 	xor dl, bl
 	xor dh, dh
@@ -102,28 +151,12 @@ crc_loop:
 	loop crc_loop
 	
 crc_done:
-	mov word ptr [crc_result], ax
+	pop si
+	pop dx
+	pop cx
+	pop bx
+	ret
 	
-	mov dx, offset text2
-	mov ah, 09h
-	int 21h
-	
-	mov ax, word ptr [crc_result]
-	call word_to_hex
-	
-	mov dx, offset hex_buffer
-	mov ah, 09h
-	int 21h
-	
-	mov dx, offset newline
-	mov ah, 09h
-	int 21h
-	
-exit:
-	mov ax, 4c00h
-	int 21h
-
-
 word_to_hex:
 	push ax
 	push bx
@@ -143,10 +176,8 @@ convert_loop:
 	jl digit
 	add al, 'A' - 10
 	jmp store_char
-
 digit:
 	add al, '0'
-
 store_char:
 	mov [si], al
 	inc si
@@ -164,5 +195,4 @@ store_char:
 	ret
 
 code ends
-end start	
-	
+end start

@@ -18,6 +18,8 @@ data segment para public
     err_operation db 'Invalid operation',  0dh, 0ah, 0
     err_div_zero db 'Divide by zero',  0dh, 0ah, 0
     
+	newline db 0Dh, 0Ah, 0
+	
     err_list dw offset err_overflow, offset err_format, offset err_operation, offset err_div_zero
 
     E_OVERFLOW equ 0
@@ -173,10 +175,13 @@ parse_dec:
 pd_no_sign:
 pd_loop:
     mov  bl, byte ptr [si]
+	cmp bl, ' '
+	jbe   pd_end
+	
     cmp  bl, '0'
-    jb   pd_end
+    jb   pd_error
     cmp  bl, '9'
-    ja   pd_end
+    ja   pd_error
     sub  bl, '0'
     mov  bh, 0
 	
@@ -241,7 +246,14 @@ pd_overflow_neg:
     stc
     jmp  pd_done
 
-
+pd_error:
+	stc
+    mov ax, E_FORMAT
+	push ax
+	call error_show
+    jmp pd_done
+	
+	
 parse_hex:
     push bp
     mov  bp, sp
@@ -285,19 +297,22 @@ ph_prefix:
 ph_no_prefix:
 ph_loop:
     mov  bl, byte ptr [si]
+	cmp  bl, ' '
+    jbe  ph_end
+	
     cmp  bl, '0'
-    jb   ph_end
+    jb   ph_error
     cmp  bl, '9'
     jbe  ph_digit
     cmp  bl, 'A'
-    jb   ph_end
+    jb   ph_error
     cmp  bl, 'F'
     jbe  ph_letter
     cmp  bl, 'a'
-    jb   ph_end
+    jb   ph_error
     cmp  bl, 'f'
     jbe  ph_letter_low
-    jmp  ph_end
+    jmp  ph_error
 	
 ph_digit:
     sub  bl, '0'
@@ -366,7 +381,7 @@ ph_done:
     pop  bp
     clc
     ret
-	
+
 ph_overflow:
     pop  dx
     pop  bx
@@ -377,6 +392,12 @@ ph_overflow:
     stc
     ret
 
+ph_error:
+    stc
+    mov  ax, E_FORMAT
+	push ax
+	call error_show
+    jmp  ph_done
 
 error_show:
     push bp
@@ -622,9 +643,24 @@ start:
     
     mov ah, 01h
     int 21h
+    
     cmp al, 'h'
     je hex_mode
+    cmp al, 'd'
+    je dec_mode
+	push offset newline
+	call print
+	mov ax, E_FORMAT
+	push ax
+    call error_show
+    
+
+dec_mode:
     mov word ptr [parser], offset parse_dec
+    jmp cont_hex
+
+hex_mode:
+    mov word ptr [parser], offset parse_hex
 	
 cont_hex:
     mov dl, 0DH
@@ -696,7 +732,7 @@ cont_hex:
     int 21h
     mov dl, 0AH
     int 21h
-    
+
     mov sp, bp
     mov ax, 4c00h
     int 21h
@@ -712,10 +748,6 @@ parse_failed:
     mov sp, bp
     mov ax, 4cFFh
     int 21h
-
-hex_mode:
-    mov word ptr [parser], offset parse_hex
-    jmp cont_hex
 
 code ends
 end start
